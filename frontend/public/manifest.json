@@ -1,6 +1,6 @@
 {
-  "name": "Skins Tracker",
-  "short_name": "Skins",
+  "name": "Gimme",
+  "short_name": "Gimme",
   "description": "Track golf specials with your crew — live leaderboard, instant settlement.",
   "start_url": "/",
   "display": "standalone",
@@ -21,6 +21,5 @@
       "purpose": "any maskable"
     }
   ],
-  "screenshots": [],
   "categories": ["sports", "utilities"]
 }
