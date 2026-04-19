@@ -342,6 +342,27 @@ export async function renderRound(app, navigate) {
     titleRow.appendChild(wsDot);
     hdrLeft.appendChild(titleRow);
     if (round.course_name) hdrLeft.appendChild(el("p", { className: "text-muted text-sm" }, round.course_name));
+
+    // Active games badges
+    const GAME_EMOJI = {
+      sandy: "🏖️", poley: "🚩", barkie: "🌲", greenie: "🟢",
+      splashy: "💧", birdie: "🐦", eagle: "🦅", stroke_play: "💰"
+    };
+    if (games.length) {
+      const gameBadges = el("div", { className: "flex gap-xs", style: "flex-wrap:wrap;margin-top:0.4rem" });
+      games.forEach(g => {
+        const badge = el("span", {
+          style: [
+            "display:inline-flex;align-items:center;gap:0.2rem",
+            "background:var(--surface-2);border:1px solid var(--border)",
+            "border-radius:999px;padding:0.1rem 0.5rem;font-size:0.72rem;font-weight:600"
+          ].join(";")
+        }, `${GAME_EMOJI[g.game_type] || "⭐"} $${parseFloat(g.point_value).toFixed(0)}`);
+        gameBadges.appendChild(badge);
+      });
+      hdrLeft.appendChild(gameBadges);
+    }
+
     hdr.appendChild(hdrLeft);
     const finishBtn = el("button", { className: "btn-gold btn-sm" }, "🏁 Finish");
     finishBtn.addEventListener("click", finishRound);
