@@ -1,0 +1,15 @@
+{
+  "name": "skins-tracker",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --prefix backend",
+    "dev:client": "npm run dev --prefix frontend",
+    "install:all": "npm install && npm install --prefix frontend && npm install --prefix backend",
+    "migrate": "psql -U postgres -d skins_tracker -f database/001_init.sql",
+    "setup": "npm run install:all && npm run migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
