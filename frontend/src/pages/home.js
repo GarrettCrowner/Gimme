@@ -24,7 +24,7 @@ export async function renderHome(app, navigate) {
 
       // Hero header
       const hero = el("div", { style: "margin-bottom:1.25rem" });
-      hero.appendChild(el("h1", {}, "⛳ Skins"));
+      hero.appendChild(el("h1", {}, "⛳ Gimme"));
       hero.appendChild(el("p", { className: "text-muted" }, "Track specials with your crew."));
       wrap.appendChild(hero);
 
