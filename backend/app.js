@@ -20,15 +20,19 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
   .map(o => o.trim());
 
-// Always allow localhost origins in any environment so Docker local dev works
-const isLocalhost = (origin) =>
-  !origin ||
-  origin.startsWith('http://localhost') ||
-  origin.startsWith('http://127.0.0.1');
+// Allow localhost and local network IPs for dev (192.168.x.x, 10.x.x.x, 172.x.x.x)
+const isLocalOrigin = (origin) => {
+  if (!origin) return true;
+  if (origin.startsWith('http://localhost')) return true;
+  if (origin.startsWith('http://127.0.0.1')) return true;
+  // Local network ranges — covers phone on same WiFi
+  if (/^http:\/\/(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(origin)) return true;
+  return false;
+};
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (isLocalhost(origin)) return callback(null, true);
+    if (isLocalOrigin(origin)) return callback(null, true);
     if (allowedOrigins.some(o => origin === o)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
