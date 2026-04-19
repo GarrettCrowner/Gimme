@@ -274,7 +274,8 @@ export async function renderRound(app, navigate) {
       await api.patch(`/rounds/${roundId}`, { status: "completed" });
       socket.send("ROUND_FINISHED", { roundId });
       socket.disconnect();
-      navigate(`/settlement?id=${roundId}`);
+      // Small delay to let DB writes settle before loading the settlement page
+      setTimeout(() => navigate(`/settlement?id=${roundId}`), 300);
     } catch (err) { showToast("Error: " + err.message); }
   }
 
