@@ -1,4 +1,4 @@
-# ⛳ Skins Tracker
+# ⛳ Gimme
 
 Track sandies, poleys, barkies, greenies, splashies, birdies, eagles, and stroke play with your golf crew. Mobile-first PWA with live WebSocket sync, push notifications, and automatic settlement.
 
@@ -7,7 +7,7 @@ Track sandies, poleys, barkies, greenies, splashies, birdies, eagles, and stroke
 ## File Structure
 
 ```
-skins-tracker/
+gimme/
 ├── .env.example                        # copy to .env and fill in values
 ├── .env                                # your local secrets — never commit this
 ├── .gitignore
@@ -158,7 +158,7 @@ cp .env.example .env
 # Edit .env — set JWT_SECRET (DB_PASSWORD can be blank on Mac default installs)
 
 # 3. Create the database
-createdb skins_tracker
+createdb gimme
 
 # 4. Install dependencies + run migration
 npm run setup
@@ -171,7 +171,7 @@ npm run dev
 - **Backend:** http://localhost:3000
 
 > **Mac note:** If `npm run setup` fails on the migrate step, run it manually:
-> `psql -d skins_tracker -f database/001_init.sql`
+> `psql -d gimme -f database/001_init.sql`
 
 ---
 
