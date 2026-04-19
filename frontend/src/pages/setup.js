@@ -101,20 +101,42 @@ export async function renderSetup(app, navigate) {
     gamesCard.appendChild(el("p", { className: "text-muted", style: "margin-bottom:0.75rem" }, "Toggle games and set point values."));
 
     GAME_DEFAULTS.forEach(g => {
-      const row = el("div", { className: "flex-between", style: "margin-bottom:0.6rem" });
-      const left = el("div", { className: "flex gap-sm", style: "align-items:center" });
-      const toggle = el("input", { type: "checkbox" });
-      toggle.checked = activeGames.has(g.game_type);
-      toggle.addEventListener("change", e => {
-        if (e.target.checked) activeGames.add(g.game_type);
-        else activeGames.delete(g.game_type);
+      const isActive = activeGames.has(g.game_type);
+      const row = el("div", {
+        className: "flex-between",
+        style: `margin-bottom:0.6rem;opacity:${isActive ? "1" : "0.5"};transition:opacity 0.15s`
       });
+      const left = el("div", { className: "flex gap-sm", style: "align-items:center;cursor:pointer" });
+
+      // Use a styled toggle instead of native checkbox for clearer visual feedback
+      const toggle = el("input", { type: "checkbox" });
+      toggle.checked = isActive;
+
+      toggle.addEventListener("change", e => {
+        const checked = e.target.checked;
+        if (checked) activeGames.add(g.game_type);
+        else activeGames.delete(g.game_type);
+        // Update opacity of the row directly without full re-render
+        row.style.opacity = checked ? "1" : "0.5";
+        valueInput.disabled = !checked;
+      });
+
+      left.addEventListener("click", (e) => {
+        // Clicking the label area also toggles
+        if (e.target !== toggle) toggle.click();
+      });
+
       left.appendChild(toggle);
       left.appendChild(el("span", {}, `${g.emoji} ${g.label}`));
       row.appendChild(left);
 
       const right = el("div", { className: "flex gap-sm", style: "align-items:center" });
-      const valueInput = el("input", { type: "number", step: "0.5", min: "0.5", value: gameValues[g.game_type], style: "width:5rem;text-align:right" });
+      const valueInput = el("input", {
+        type: "number", step: "0.5", min: "0.5",
+        value: gameValues[g.game_type],
+        style: "width:5rem;text-align:right",
+        disabled: !isActive
+      });
       valueInput.addEventListener("input", e => { gameValues[g.game_type] = parseFloat(e.target.value) || g.point_value; });
       right.appendChild(el("span", { className: "text-muted" }, "$"));
       right.appendChild(valueInput);
