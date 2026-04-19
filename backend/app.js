@@ -20,11 +20,16 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
   .map(o => o.trim());
 
+// Always allow localhost origins in any environment so Docker local dev works
+const isLocalhost = (origin) =>
+  !origin ||
+  origin.startsWith('http://localhost') ||
+  origin.startsWith('http://127.0.0.1');
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, health checks)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isLocalhost(origin)) return callback(null, true);
+    if (allowedOrigins.some(o => origin === o)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
