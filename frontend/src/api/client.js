@@ -1,0 +1,39 @@
+// client/src/api/client.js
+
+const BASE_URL = "/api";
+
+function getToken() {
+  return localStorage.getItem("token");
+}
+
+async function request(method, path, body = null) {
+  const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+
+  const res = await fetch(`${BASE_URL}${path}`, options);
+
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    window.location.href = "/login";
+    return;
+  }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export const api = {
+  get:    (path)         => request("GET",    path),
+  post:   (path, body)   => request("POST",   path, body),
+  put:    (path, body)   => request("PUT",    path, body),
+  patch:  (path, body)   => request("PATCH",  path, body),
+  delete: (path)         => request("DELETE", path),
+};
