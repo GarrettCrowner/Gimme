@@ -226,8 +226,51 @@ export async function renderRound(app, navigate) {
         playerName: playerName(players.find(p => p.id === playerId) || {}),
         holeNumber: activeHole,
       });
-      render();
+      // Update only the special chips and leaderboard — don't re-render the whole page
+      // which would reset the stepper values
+      updateSpecialChips();
+      updateLeaderboard();
     } catch (err) { showToast("Error: " + err.message); }
+  }
+
+  function updateSpecialChips() {
+    // Re-render just the special chips for each player
+    players.forEach(p => {
+      const games = (window._roundGames || []).filter(g => SPECIAL_META[g.game_type]);
+      games.forEach(g => {
+        const chipId = `chip-${p.id}-${g.game_type}`;
+        const chip = document.getElementById(chipId);
+        if (!chip) return;
+        const logged = specials.some(
+          s => s.round_player_id === p.id && s.hole_number === activeHole && s.game_type === g.game_type
+        );
+        chip.className = `special-chip${logged ? ' logged' : ''}`;
+      });
+    });
+    // Also update hole grid indicators
+    const holeButtons = document.querySelectorAll('.hole-btn');
+    holeButtons.forEach((btn, i) => {
+      const h = i + 1;
+      if (holeHasSpecial(h)) btn.classList.add('has-special');
+      else btn.classList.remove('has-special');
+    });
+  }
+
+  function updateLeaderboard() {
+    const lbList = document.querySelector('.leaderboard');
+    if (!lbList) return;
+    const lb = computeLeaderboard();
+    lb.forEach((p, i) => {
+      const rows = lbList.querySelectorAll('.leaderboard-row');
+      if (!rows[i]) return;
+      const balEl = rows[i].querySelector('.leaderboard-balance');
+      const spcEl = rows[i].querySelector('.leaderboard-specials');
+      if (balEl) {
+        balEl.textContent = formatCurrency(p.balance);
+        balEl.className = `leaderboard-balance ${p.balance >= 0 ? 'text-green' : 'text-red'}`;
+      }
+      if (spcEl) spcEl.textContent = `${p.specialsCount}★`;
+    });
   }
 
   async function saveScores(playerScores) {
@@ -395,6 +438,7 @@ export async function renderRound(app, navigate) {
 
       // Special chips
       const specialGames = games.filter(g => SPECIAL_META[g.game_type]);
+      window._roundGames = games; // store for updateSpecialChips
       if (specialGames.length) {
         const chips = el("div", { className: "special-chips" });
         specialGames.forEach(g => {
@@ -402,9 +446,10 @@ export async function renderRound(app, navigate) {
             s => s.round_player_id === p.id && s.hole_number === activeHole && s.game_type === g.game_type
           );
           const meta = SPECIAL_META[g.game_type];
-          const chip = el("div", { className: `special-chip${logged ? " logged" : ""}` },
-            `${meta.emoji} ${meta.label}`
-          );
+          const chip = el("div", {
+            className: `special-chip${logged ? " logged" : ""}`,
+            id: `chip-${p.id}-${g.game_type}`
+          }, `${meta.emoji} ${meta.label}`);
           chip.addEventListener("click", () => logSpecial(p.id, g));
           chips.appendChild(chip);
         });
