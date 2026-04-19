@@ -4,7 +4,11 @@
 // The server acts as a relay — on any event, clients re-fetch from the REST API
 // to stay in sync with the DB as the single source of truth.
 
-const WS_BASE = import.meta.env.VITE_WS_URL || `ws://${window.location.host}/ws`;
+// In production, VITE_API_URL is the backend URL (https://...), convert to wss://
+const WS_BASE = import.meta.env.VITE_WS_URL ||
+  (import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws'
+    : `ws://${window.location.host}/ws`);
 
 const RECONNECT_DELAY_MS = 3000;
 const PING_INTERVAL_MS   = 25000;
