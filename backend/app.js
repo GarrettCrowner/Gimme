@@ -9,6 +9,9 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+// Trust Railway's proxy (required for rate limiting and X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // ── Security headers ───────────────────────────────────────────────────────
 app.use(helmet({
   // Allow inline scripts needed for the PWA service worker registration
