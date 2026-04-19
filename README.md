@@ -8,9 +8,10 @@ Track sandies, poleys, barkies, greenies, splashies, birdies, eagles, and stroke
 
 ```
 skins-tracker/
-├── .env.example
+├── .env.example                        # copy to .env and fill in values
+├── .env                                # your local secrets — never commit this
 ├── .gitignore
-├── package.json                        # root scripts: dev, setup, migrate
+├── package.json                        # root scripts: dev, setup, migrate, docker:*
 ├── README.md
 │
 ├── frontend/                           # Vanilla JS + Vite
@@ -43,8 +44,7 @@ skins-tracker/
 │       │   ├── setup.js                # configure round, players, games, stroke indexes
 │       │   ├── round.js                # live hole tracker (steppers, specials, WS sync)
 │       │   ├── settlement.js           # final standings, payments, scorecard
-│       │   ├── stats.js                # all-time earnings, specials, friends
-│       │   └── artists.js              # placeholder (concert crew feature)
+│       │   └── stats.js                # all-time earnings, specials, friends
 │       ├── styles/
 │       │   ├── base.css                # mobile-first design system, typography, layout
 │       │   └── components.css          # navbar, leaderboard, hole grid, chips, etc.
@@ -84,59 +84,28 @@ skins-tracker/
 
 ---
 
-## Quick Start (Local, No Docker)
+## Quick Start (Docker — Recommended)
 
-### Prerequisites
-- Node.js 20+
-- PostgreSQL 14+
+### 1. Clone and configure
 
 ```bash
-# 1. Clone
 git clone <your-repo> && cd skins-tracker
-
-# 2. Install all dependencies + run DB migration
-npm run setup
-
-# 3. Configure environment
-cp .env.example backend/.env
-# Edit backend/.env — set DB_PASSWORD and JWT_SECRET
-
-# 4. Add PWA icons
-# Place 192×192 and 512×512 PNGs at:
-# frontend/public/icons/icon-192.png
-# frontend/public/icons/icon-512.png
-
-# 5. Run dev servers (hot reload on both)
-npm run dev
-```
-
-- **Frontend:** http://localhost:5173
-- **Backend:** http://localhost:3000
-- **WebSocket:** ws://localhost:3000/ws
-
----
-
-## Docker (Production)
-
-### 1. Create your `.env` file
-
-```bash
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` at the root:
 
 ```env
 DB_PASSWORD=supersecretdbpassword
 JWT_SECRET=a-long-random-string-at-least-32-chars
+PORT=8080
+
+CLIENT_URL=http://localhost:8080
 
 # Optional: push notifications
 VAPID_EMAIL=you@yourdomain.com
-VAPID_PUBLIC_KEY=        # npx web-push generate-vapid-keys
+VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
-
-CLIENT_URL=https://yourdomain.com
-PORT=80
 ```
 
 ### 2. Generate VAPID keys (optional)
@@ -149,34 +118,72 @@ npx web-push generate-vapid-keys
 ### 3. Start
 
 ```bash
-# Production
-docker compose -f docker/docker-compose.yml up -d --build
-
-# Development (hot reload)
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.dev.yml up
-
-# Logs
-docker compose -f docker/docker-compose.yml logs -f
-
-# Stop
-docker compose -f docker/docker-compose.yml down
-
-# Stop + wipe database (destructive)
-docker compose -f docker/docker-compose.yml down -v
+npm run docker:up
 ```
 
-Available at **http://localhost** (or your configured `PORT`).
-The DB migration runs automatically on first boot via `initdb.d`.
+App is available at **http://localhost:8080**.
+The DB migration runs automatically on first boot.
 
-### Deploying to a VPS
+---
+
+## npm Scripts
+
+| Script | What it does |
+|--------|-------------|
+| `npm run docker:up` | Build and start all containers |
+| `npm run docker:down` | Stop all containers |
+| `npm run docker:down:clean` | Stop + wipe the database (destructive) |
+| `npm run docker:logs` | Tail logs for all containers |
+| `npm run docker:logs:backend` | Tail backend logs only |
+| `npm run docker:restart` | Rebuild and restart after a code change |
+| `npm run docker:ps` | Check container status |
+| `npm run docker:dev` | Start in dev mode with hot reload |
+| `npm run dev` | Local dev without Docker (requires local Postgres) |
+| `npm run setup` | Install all deps + run DB migration (local only) |
+
+---
+
+## Local Dev (No Docker)
+
+### Prerequisites
+- Node.js 20+
+- PostgreSQL 14+
+
+```bash
+# 1. Clone
+git clone <your-repo> && cd skins-tracker
+
+# 2. Configure environment — .env lives at the root
+cp .env.example .env
+# Edit .env — set JWT_SECRET (DB_PASSWORD can be blank on Mac default installs)
+
+# 3. Create the database
+createdb skins_tracker
+
+# 4. Install dependencies + run migration
+npm run setup
+
+# 5. Run dev servers (hot reload on both)
+npm run dev
+```
+
+- **Frontend:** http://localhost:5173
+- **Backend:** http://localhost:3000
+
+> **Mac note:** If `npm run setup` fails on the migrate step, run it manually:
+> `psql -d skins_tracker -f database/001_init.sql`
+
+---
+
+## Deploying to a VPS
 
 ```bash
 git clone <your-repo> && cd skins-tracker
-cp .env.example .env   # fill in production values
-docker compose -f docker/docker-compose.yml up -d --build
+cp .env.example .env   # fill in production values, set PORT=80 or 443
+npm run docker:up
 
 # HTTPS with Caddy (easiest):
-# Add a Caddyfile: yourdomain.com { reverse_proxy localhost:80 }
+# Caddyfile: yourdomain.com { reverse_proxy localhost:80 }
 ```
 
 ---
