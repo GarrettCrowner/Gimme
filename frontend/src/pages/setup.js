@@ -204,7 +204,8 @@ export async function renderSetup(app, navigate) {
 
       // Stroke index input
       const siTd = el("td", { style: "padding:0.25rem;text-align:center" });
-      const siInput = el("input", { type: "number", min: "1", max: "18", value: String(hole.stroke_index), style: "width:3.5rem;text-align:center;min-height:36px;font-size:0.9rem;margin:0 auto;display:block" });
+      const siStyle = "width:3.5rem;text-align:center;min-height:36px;font-size:0.9rem;margin:0 auto;display:block";
+      const siInput = el("input", { type: "number", min: "1", max: "18", value: String(hole.stroke_index), style: siStyle });
       siInput.addEventListener("input", e => { customStrokeIndexes[i].stroke_index = parseInt(e.target.value) || hole.stroke_index; });
       siTd.appendChild(siInput);
       row.appendChild(siTd);
