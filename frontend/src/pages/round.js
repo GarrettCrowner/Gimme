@@ -154,7 +154,7 @@ export async function renderRound(app, navigate) {
 
     const gameValues = Object.fromEntries(games.map(g => [g.game_type, parseFloat(g.point_value)]));
     const scoreSpecials = deriveScoreSpecials(
-      holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id })),
+      holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id, holeNumber: s.hole_number })),
       { ...SCORE_GAME_DEFAULTS, ...gameValues }
     );
     const allSpecials = [
@@ -169,7 +169,7 @@ export async function renderRound(app, navigate) {
     if (strokePlayGame) {
       strokeBal = calculateStrokePlayPayouts(
         mappedPlayers,
-        holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id })),
+        holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id, holeNumber: s.hole_number })),
         handicapStrokes,
         parseFloat(strokePlayGame.point_value),
         round.holes
