@@ -54,7 +54,7 @@ export function calculateStrokePlayPayouts(players, holeScores, handicapStrokes,
     scoreByHole[score.holeNumber][score.roundPlayerId] = score.strokes;
   }
 
-  let carryOver = 0;
+  let carryHoles = 0; // number of tied holes carrying over
 
   for (let hole = 1; hole <= totalHoles; hole++) {
     const holeData = scoreByHole[hole] || {};
@@ -62,26 +62,28 @@ export function calculateStrokePlayPayouts(players, holeScores, handicapStrokes,
       .filter((id) => holeData[id] != null)
       .map((id) => ({ id, net: netScore(holeData[id], handicapStrokes[id]?.[hole] ?? 0) }));
 
-    if (netScores.length === 0) { continue; } // skip unplayed holes, don't add carry
+    if (netScores.length === 0) { continue; } // skip unplayed holes
 
     const minNet = Math.min(...netScores.map((s) => s.net));
     const winners = netScores.filter((s) => s.net === minNet);
 
-    // Push for one is push for all — any tie means nobody wins, full pot carries
-    if (winners.length > 1) { carryOver += valuePerHole * playerCount; continue; }
+    // Push for one is push for all — tie carries to next hole
+    if (winners.length > 1) { carryHoles++; continue; }
 
-    // Single winner collects the carryOver pot on top of the normal per-hole payout.
-    // Each loser pays only their flat $valuePerHole — they already "paid" the carryOver
-    // holes implicitly since they didn't win them.
+    // Winner collects from all losers for this hole + all carried holes
+    // Everyone (winner and losers) pays $1 per hole played (including carries)
+    // Winner nets: (playerCount - 1) * valuePerHole * (carryHoles + 1)
+    // Each loser nets: -valuePerHole * (carryHoles + 1)
+    const totalHolesInPot = carryHoles + 1;
     const winnerId = winners[0].id;
     for (const id of playerIds) {
       if (id === winnerId) {
-        balances[id] += parseFloat(((playerCount - 1) * valuePerHole + carryOver).toFixed(2));
+        balances[id] += parseFloat(((playerCount - 1) * valuePerHole * totalHolesInPot).toFixed(2));
       } else {
-        balances[id] -= parseFloat(valuePerHole.toFixed(2));
+        balances[id] -= parseFloat((valuePerHole * totalHolesInPot).toFixed(2));
       }
     }
-    carryOver = 0;
+    carryHoles = 0;
   }
 
   return balances;
