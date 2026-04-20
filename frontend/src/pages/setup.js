@@ -32,6 +32,7 @@ export async function renderSetup(app, navigate) {
   let availableTees     = [];    // tee options from API
   let selectedTee       = null;  // { tee_name, slope_rating, course_rating, par_total }
   let courseSearchTimer = null;
+  let roundHoles = 18; // 9 or 18
 
   try { friends = await api.get("/friends"); } catch {}
 
@@ -63,6 +64,7 @@ ${preset.city}`);
           par: h.par,
           stroke_index: h.stroke_index,
         }));
+        roundHoles = preset.holes.length; // auto-set 9 or 18 from preset
         if (!roundName) roundName = preset.name;
         render();
       });
@@ -77,6 +79,38 @@ ${preset.city}`);
     const nameInput = el("input", { type: "text", placeholder: "Round name (e.g. Saturday at Applebrook)", value: roundName });
     nameInput.addEventListener("input", e => { roundName = e.target.value; });
     detailsCard.appendChild(nameInput);
+
+    // 9 or 18 hole toggle
+    const holesRow = el("div", { style: "display:flex;gap:0.5rem;margin-top:0.5rem;align-items:center" });
+    holesRow.appendChild(el("span", { className: "text-muted text-sm", style: "flex-shrink:0" }, "Holes:"));
+    [9, 18].forEach(n => {
+      const btn = el("button", {
+        className: roundHoles === n ? "btn-primary btn-sm" : "btn-outline btn-sm",
+        style: "min-width:3rem"
+      }, String(n));
+      btn.addEventListener("click", () => {
+        roundHoles = n;
+        // Trim or expand customStrokeIndexes to match
+        if (customStrokeIndexes) {
+          if (n === 9) {
+            customStrokeIndexes = customStrokeIndexes.slice(0, 9);
+          } else if (customStrokeIndexes.length === 9) {
+            const DEFAULT_PARS = [4,4,3,5,4,4,3,5,4];
+            const DEFAULT_SI   = [8,10,16,4,2,14,18,6,12];
+            for (let i = 9; i < 18; i++) {
+              customStrokeIndexes.push({
+                hole_number: i + 1,
+                par: DEFAULT_PARS[i - 9],
+                stroke_index: DEFAULT_SI[i - 9],
+              });
+            }
+          }
+        }
+        render();
+      });
+      holesRow.appendChild(btn);
+    });
+    detailsCard.appendChild(holesRow);
 
     // Course search
     const courseSearchWrap = el("div", { style: "position:relative;margin-top:0.5rem" });
@@ -324,15 +358,19 @@ ${preset.city}`);
       siToggle.textContent = siBody.style.display === "none" ? "▼ Edit pars & stroke indexes" : "▲ Hide";
     });
 
-    // Build 18-hole grid
+    // Build hole grid (9 or 18 depending on roundHoles)
     const DEFAULT_PARS = [4,4,3,5,4,4,3,5,4,4,4,3,5,4,4,3,5,4];
     const DEFAULT_SI   = [7,11,15,3,1,13,17,5,9,8,10,16,4,2,14,18,6,12];
     if (!customStrokeIndexes) {
-      customStrokeIndexes = DEFAULT_PARS.map((par, i) => ({
+      customStrokeIndexes = DEFAULT_PARS.slice(0, roundHoles).map((par, i) => ({
         hole_number: i + 1,
         par,
         stroke_index: DEFAULT_SI[i],
       }));
+    }
+    // Trim to current roundHoles if needed
+    if (customStrokeIndexes.length !== roundHoles) {
+      customStrokeIndexes = customStrokeIndexes.slice(0, roundHoles);
     }
 
     const siNote = el("p", { className: "text-muted text-sm", style: "margin-bottom:0.75rem" },
@@ -398,6 +436,7 @@ ${preset.city}`);
       const round = await api.post("/rounds", {
         name: roundName,
         course_name: courseName,
+        holes: roundHoles,
         slope_rating: selectedTee?.slope_rating || null,
         course_rating: selectedTee?.course_rating || null,
         par_total: selectedTee?.par_total || null,
