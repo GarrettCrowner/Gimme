@@ -2,6 +2,7 @@
 import { api } from "../api/client.js";
 import { el } from "../utils/helpers.js";
 import { searchCourses, getCourseTees } from "../utils/courseApi.js";
+import { COURSE_PRESETS } from "../utils/coursePresets.js";
 
 const GAME_DEFAULTS = [
   { game_type: "sandy",       label: "Sandy",       point_value: 1, emoji: "🏖️" },
@@ -22,7 +23,7 @@ export async function renderSetup(app, navigate) {
   let roundName   = "";
   let courseName  = "";
   let players     = [];
-  let activeGames = new Set(["sandy","poley","barkie","greenie","splashy","birdie","eagle","stroke_play"]);
+  let activeGames = new Set(["sandy","poley","barkie","greenie","splashy","birdie","eagle"]);
   let gameValues  = Object.fromEntries(GAME_DEFAULTS.map(g => [g.game_type, g.point_value]));
   let friends          = [];
   let error            = "";
@@ -40,6 +41,35 @@ export async function renderSetup(app, navigate) {
     wrap.appendChild(el("h1", {}, "⛳ New Round"));
 
     if (error) wrap.appendChild(el("div", { className: "card text-red" }, error));
+
+    // Quick course presets
+    const presetCard = el("div", { className: "card" });
+    presetCard.appendChild(el("h2", {}, "Quick Select Course"));
+    const presetGrid = el("div", { style: "display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem" });
+    COURSE_PRESETS.forEach(preset => {
+      const btn = el("button", {
+        className: "btn-outline btn-sm",
+        style: "font-size:0.8rem;text-align:left;line-height:1.3"
+      }, `${preset.name.split(' ').slice(0, 2).join(' ')}
+${preset.city}`);
+      btn.style.whiteSpace = "pre-line";
+      btn.addEventListener("click", () => {
+        // Apply preset
+        courseName = preset.name;
+        selectedCourse = { course_name: preset.name, city: preset.city, state: preset.state };
+        selectedTee = { slope_rating: preset.slope_rating, course_rating: preset.course_rating, par_total: preset.par_total };
+        customStrokeIndexes = preset.holes.map(h => ({
+          hole_number: h.hole_number,
+          par: h.par,
+          stroke_index: h.stroke_index,
+        }));
+        if (!roundName) roundName = preset.name;
+        render();
+      });
+      presetGrid.appendChild(btn);
+    });
+    presetCard.appendChild(presetGrid);
+    wrap.appendChild(presetCard);
 
     // Round details
     const detailsCard = el("div", { className: "card" });
@@ -134,7 +164,16 @@ export async function renderSetup(app, navigate) {
         const isSelected = selectedTee?.id === tee.id;
         const btn = el("button", {
           className: isSelected ? "btn-primary btn-sm" : "btn-outline btn-sm",
-          style: `background:${isSelected ? "" : tee.tee_color || "transparent"};border-color:${tee.tee_color || "var(--green)"};color:${isSelected ? "" : "#fff"};text-shadow:0 1px 2px rgba(0,0,0,0.4)`
+          style: (() => {
+            const color = (tee.tee_color || "").toLowerCase();
+            const isLight = ["white","#fff","#ffffff","yellow","#ffff00","silver","#c0c0c0","cream","beige","#f5f5f5","#fafafa"].some(lc => color.includes(lc));
+            if (isSelected) return "";
+            const bg = tee.tee_color || "transparent";
+            const border = isLight ? "#999" : (tee.tee_color || "var(--green)");
+            const textColor = isLight ? "#1a1a1a" : "#fff";
+            const textShadow = isLight ? "none" : "0 1px 2px rgba(0,0,0,0.4)";
+            return `background:${bg};border:2px solid ${border};color:${textColor};text-shadow:${textShadow}`;
+          })()
         }, `${tee.tee_name} (${tee.slope_rating}/${tee.course_rating})`);
         btn.addEventListener("click", () => {
           selectedTee = tee;
