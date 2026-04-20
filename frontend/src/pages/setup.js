@@ -69,7 +69,8 @@ ${preset.city}`);
             par_total: t.par_total,
             gender: "Male",
           }));
-          selectedTee = availableTees[0]; // auto-select first tee
+          // Auto-select White tee if available, otherwise first tee
+          selectedTee = availableTees.find(t => t.tee_name.toLowerCase() === 'white') || availableTees[0];
         } else {
           availableTees = [];
           selectedTee = { slope_rating: preset.slope_rating, course_rating: preset.course_rating, par_total: preset.par_total };
