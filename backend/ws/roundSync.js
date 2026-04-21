@@ -3,6 +3,15 @@ const { WebSocketServer, WebSocket } = require("ws");
 const jwt = require("jsonwebtoken");
 const url  = require("url");
 
+// Lazy-load notifyRound to avoid circular dependency
+let _notifyRound = null;
+function notifyRound(...args) {
+  if (!_notifyRound) {
+    try { _notifyRound = require("../routes/users").notifyRound; } catch {}
+  }
+  if (_notifyRound) return _notifyRound(...args);
+}
+
 // Map of roundId -> Set of WebSocket clients
 const rooms = new Map();
 
