@@ -40,6 +40,7 @@ export async function renderLogin(app, navigate) {
           data = await api.post("/auth/login", { email: emailInput.value, password: passwordInput.value });
         }
         localStorage.setItem("token", data.token);
+        window.dispatchEvent(new CustomEvent("user-logged-in"));
         navigate("/");
       } catch (err) { error = err.message; render(); }
     });
