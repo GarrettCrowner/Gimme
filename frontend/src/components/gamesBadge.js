@@ -3,7 +3,7 @@ import { el } from "../utils/helpers.js";
 
 const EMOJI = {
   sandy: "🏖️", poley: "🚩", barkie: "🌲",
-  greenie: "🟢", splashy: "💧", birdie: "🐦", eagle: "🦅", stroke_play: "💰"
+  greenie: "🟢", splashy: "💧", birdie: "🐦", eagle: "🦅", stroke_play: "🎯"
 };
 
 /**
