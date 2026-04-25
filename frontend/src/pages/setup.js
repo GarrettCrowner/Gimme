@@ -12,7 +12,7 @@ const GAME_DEFAULTS = [
   { game_type: "splashy",     label: "Splashy",     point_value: 1, emoji: "💧" },
   { game_type: "birdie",      label: "Birdie",      point_value: 2, emoji: "🐦" },
   { game_type: "eagle",       label: "Eagle",       point_value: 5, emoji: "🦅" },
-  { game_type: "stroke_play", label: "Stroke Play", point_value: 1, emoji: "💰" },
+  { game_type: "stroke_play", label: "Skins", point_value: 1, emoji: "🎯", unit: "/ skin" },
 ];
 
 const PLAYER_COLORS = ["#2d6a4f","#f4a261","#e63946","#4361ee","#7209b7","#f72585"];
@@ -360,6 +360,7 @@ ${preset.city}`);
       valueInput.addEventListener("input", e => { gameValues[g.game_type] = parseFloat(e.target.value) || g.point_value; });
       right.appendChild(el("span", { className: "text-muted" }, "$"));
       right.appendChild(valueInput);
+      if (g.unit) right.appendChild(el("span", { className: "text-muted text-sm", style: "white-space:nowrap" }, g.unit));
       row.appendChild(right);
       gamesCard.appendChild(row);
     });
