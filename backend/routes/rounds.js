@@ -425,12 +425,13 @@ router.get('/stats/season', async (req, res, next) => {
         COALESCE(
           (SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp2 ON rp2.id = se.to_player
-           WHERE rp2.user_id = u.id AND se.round_id = ANY($1))
+           WHERE rp2.user_id = u.id AND se.round_id = ANY($1)), 0)
           -
+        COALESCE(
           (SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp3 ON rp3.id = se.from_player
-           WHERE rp3.user_id = u.id AND se.round_id = ANY($1))
-        , 0) AS season_earnings
+           WHERE rp3.user_id = u.id AND se.round_id = ANY($1)), 0)
+        AS season_earnings
       FROM users u
       JOIN round_players rp ON rp.user_id = u.id AND rp.round_id = ANY($1)
       GROUP BY u.id, u.name
@@ -467,17 +468,17 @@ router.get('/stats/h2h', async (req, res, next) => {
 
       // Net earnings vs this friend across shared rounds
       const earnings = await query(`
-        SELECT COALESCE(
-          (SELECT SUM(se.amount) FROM settlements se
+        SELECT
+          COALESCE((SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp_to   ON rp_to.id   = se.to_player   AND rp_to.user_id   = $1
            JOIN round_players rp_from ON rp_from.id = se.from_player AND rp_from.user_id = $2
-           WHERE se.round_id = ANY($3))
+           WHERE se.round_id = ANY($3)), 0)
           -
-          (SELECT SUM(se.amount) FROM settlements se
+          COALESCE((SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp_from ON rp_from.id = se.from_player AND rp_from.user_id = $1
            JOIN round_players rp_to   ON rp_to.id   = se.to_player   AND rp_to.user_id   = $2
-           WHERE se.round_id = ANY($3))
-        , 0) AS net
+           WHERE se.round_id = ANY($3)), 0)
+        AS net
       `, [userId, friend.id, roundIds]);
 
       const net = parseFloat(earnings.rows[0]?.net || 0);
@@ -486,17 +487,17 @@ router.get('/stats/h2h', async (req, res, next) => {
       let wins = 0, losses = 0;
       for (const rid of roundIds) {
         const roundEarnings = await query(`
-          SELECT COALESCE(
-            (SELECT SUM(se.amount) FROM settlements se
+          SELECT
+            COALESCE((SELECT SUM(se.amount) FROM settlements se
              JOIN round_players rp_to   ON rp_to.id   = se.to_player   AND rp_to.user_id   = $1
              JOIN round_players rp_from ON rp_from.id = se.from_player AND rp_from.user_id = $2
-             WHERE se.round_id = $3)
+             WHERE se.round_id = $3), 0)
             -
-            (SELECT SUM(se.amount) FROM settlements se
+            COALESCE((SELECT SUM(se.amount) FROM settlements se
              JOIN round_players rp_from ON rp_from.id = se.from_player AND rp_from.user_id = $1
              JOIN round_players rp_to   ON rp_to.id   = se.to_player   AND rp_to.user_id   = $2
-             WHERE se.round_id = $3)
-          , 0) AS net
+             WHERE se.round_id = $3), 0)
+          AS net
         `, [userId, friend.id, rid]);
         const roundNet = parseFloat(roundEarnings.rows[0]?.net || 0);
         if (roundNet > 0) wins++;
@@ -527,12 +528,13 @@ router.get('/stats/best-rounds', async (req, res, next) => {
         COALESCE(
           (SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp2 ON rp2.id = se.to_player
-           WHERE rp2.user_id = $1 AND se.round_id = r.id)
+           WHERE rp2.user_id = $1 AND se.round_id = r.id), 0)
           -
+        COALESCE(
           (SELECT SUM(se.amount) FROM settlements se
            JOIN round_players rp3 ON rp3.id = se.from_player
-           WHERE rp3.user_id = $1 AND se.round_id = r.id)
-        , 0) AS net_earnings
+           WHERE rp3.user_id = $1 AND se.round_id = r.id), 0)
+        AS net_earnings
       FROM rounds r
       JOIN round_players rp ON rp.round_id = r.id AND rp.user_id = $1
       WHERE r.status = 'completed'
