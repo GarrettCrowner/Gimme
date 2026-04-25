@@ -451,13 +451,41 @@ export async function renderRound(app, navigate) {
       const mappedPlayers = players.map(p => ({ id: p.id, name: playerName(p) }));
       const gameValues = Object.fromEntries(games.map(g => [g.game_type, parseFloat(g.point_value)]));
       const scoreSpecials = deriveScoreSpecials(
-        holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id })), gameValues
+        holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id, holeNumber: s.hole_number })),
+        { ...SCORE_GAME_DEFAULTS, ...gameValues }
       );
       const allSpecials = [
         ...specials.map(s => ({ roundPlayerId: s.round_player_id, gameType: s.game_type, pointValue: parseFloat(s.point_value) })),
         ...scoreSpecials,
       ];
-      const finalBal   = mergeBalances(calculateBalances(mappedPlayers, allSpecials));
+      const specialsBal = calculateBalances(mappedPlayers, allSpecials);
+
+      // Include stroke play in settlement
+      const strokePlayGame = games.find(g => g.game_type === "stroke_play");
+      let strokeBal = null;
+      if (strokePlayGame) {
+        // Rebuild handicap strokes
+        const hcStrokes = {};
+        mappedPlayers.forEach(p => { hcStrokes[p.id] = {}; });
+        const strokeIndexes = await api.get(`/rounds/${roundId}/stroke-indexes`).catch(() => []);
+        if (strokeIndexes.length) {
+          const { calculateCourseHandicap, distributeHandicapStrokes } = await import("../utils/scoring.js");
+          mappedPlayers.forEach(p => {
+            const rp = players.find(rp => rp.id === p.id);
+            const ch = calculateCourseHandicap(rp?.handicap_index ?? 0, round.slope_rating, round.course_rating, round.par_total);
+            hcStrokes[p.id] = distributeHandicapStrokes(ch, strokeIndexes);
+          });
+        }
+        strokeBal = calculateStrokePlayPayouts(
+          mappedPlayers,
+          holeScores.map(s => ({ ...s, roundPlayerId: s.round_player_id, holeNumber: s.hole_number })),
+          hcStrokes,
+          parseFloat(strokePlayGame.point_value),
+          round.holes
+        );
+      }
+
+      const finalBal = mergeBalances(specialsBal, strokeBal);
       const settlements = calculateSettlements(finalBal, mappedPlayers);
       const dbSettlements = settlements.map(s => ({
         from_player: s.from,
