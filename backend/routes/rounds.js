@@ -328,28 +328,49 @@ router.get('/stats/me', async (req, res, next) => {
   try {
     const userId = req.user.id;
     const [rounds, specials, earnings] = await Promise.all([
-      query('SELECT COUNT(DISTINCT round_id) AS total_rounds FROM round_players WHERE user_id = $1', [userId]),
+      // Count completed rounds only
+      query(`SELECT COUNT(DISTINCT rp.round_id) AS total_rounds
+             FROM round_players rp
+             JOIN rounds r ON r.id = rp.round_id
+             WHERE rp.user_id = $1 AND r.status = 'completed'`, [userId]),
+      // Specials earned — manual specials + auto-detected birdies/eagles from hole scores
       query(
-        `SELECT rg.game_type, COUNT(*) AS count
-         FROM specials s
-         JOIN round_games rg   ON rg.id = s.round_game_id
-         JOIN round_players rp ON rp.id = s.round_player_id
-         WHERE rp.user_id = $1
-         GROUP BY rg.game_type ORDER BY count DESC`,
+        `SELECT game_type, COUNT(*) AS count FROM (
+           -- Manual specials (sandy, poley, etc.)
+           SELECT rg.game_type
+           FROM specials s
+           JOIN round_games rg   ON rg.id = s.round_game_id
+           JOIN round_players rp ON rp.id = s.round_player_id
+           WHERE rp.user_id = $1
+           UNION ALL
+           -- Auto-detected birdies from hole scores
+           SELECT 'birdie' AS game_type
+           FROM hole_scores hs
+           JOIN round_players rp ON rp.id = hs.round_player_id
+           JOIN hole_stroke_indexes hsi ON hsi.round_id = rp.round_id AND hsi.hole_number = hs.hole_number
+           WHERE rp.user_id = $1 AND hs.strokes = hsi.par - 1
+           UNION ALL
+           -- Auto-detected eagles from hole scores
+           SELECT 'eagle' AS game_type
+           FROM hole_scores hs
+           JOIN round_players rp ON rp.id = hs.round_player_id
+           JOIN hole_stroke_indexes hsi ON hsi.round_id = rp.round_id AND hsi.hole_number = hs.hole_number
+           WHERE rp.user_id = $1 AND hs.strokes <= hsi.par - 2
+         ) combined
+         GROUP BY game_type ORDER BY count DESC`,
         [userId]
       ),
+      // All-time earnings from settlements (includes skins + specials)
       query(
-        `SELECT SUM(
-           CASE WHEN rp.user_id = $1
-             THEN rg.point_value * ((SELECT COUNT(*) FROM round_players rp2 WHERE rp2.round_id = s.round_id) - 1)
-             ELSE -rg.point_value
-           END
-         ) AS total_earnings
-         FROM specials s
-         JOIN round_games rg    ON rg.id  = s.round_game_id
-         JOIN round_players rp  ON rp.id  = s.round_player_id
-         JOIN round_players rp2 ON rp2.round_id = s.round_id AND rp2.user_id = $1
-         WHERE s.round_id IN (SELECT round_id FROM round_players WHERE user_id = $1)`,
+        `SELECT
+           COALESCE((SELECT SUM(se.amount) FROM settlements se
+            JOIN round_players rp ON rp.id = se.to_player
+            WHERE rp.user_id = $1), 0)
+           -
+           COALESCE((SELECT SUM(se.amount) FROM settlements se
+            JOIN round_players rp ON rp.id = se.from_player
+            WHERE rp.user_id = $1), 0)
+         AS total_earnings`,
         [userId]
       ),
     ]);
